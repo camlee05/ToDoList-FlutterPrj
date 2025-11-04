@@ -34,6 +34,16 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  child: Image.asset(
+                    _isLogin ? 'assets/login.jpg' : 'assets/welcome.jpg',
+                    key: ValueKey(_isLogin),
+                    height: 180,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 30),
                 // Logo/Title
                 Text(
                   "Task Manager",

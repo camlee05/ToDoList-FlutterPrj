@@ -22,6 +22,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-#  assets:
-#    - avt.jpg
+  assets:
+    - assets/
