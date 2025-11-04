@@ -6,11 +6,13 @@ import '../widgets/create_group_sheet.dart';
 class GroupsPage extends StatefulWidget {
   final List<Map<String, dynamic>> groups;
   final Function(Map<String, dynamic>) onAddGroup;
+  final Function(Map<String, dynamic>) onDeleteGroup;
 
   const GroupsPage({
     super.key,
     required this.groups,
     required this.onAddGroup,
+    required this.onDeleteGroup,
   });
 
   @override
@@ -26,10 +28,63 @@ class _GroupsPageState extends State<GroupsPage> {
       builder: (_) => CreateGroupSheet(
         onCreateGroup: (newGroup) {
           widget.onAddGroup(newGroup);
-          Navigator.pop(context);
         },
       ),
     );
+  }
+
+
+  void _showDeleteConfirmation(Map<String, dynamic> group) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete ${group['title']}?'),
+        content: Text('All tasks in this group will also be deleted.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              widget.onDeleteGroup(group);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Success ${group['title']}')),
+              );
+            },
+            child: Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  IconData _getSafeIcon(dynamic icon) {
+    try {
+      if (icon is IconData) {
+        return icon;
+      } else if (icon is int) {
+        return IconData(icon, fontFamily: 'MaterialIcons');
+      }
+      return Icons.folder;
+    } catch (e) {
+      return Icons.folder;
+    }
+  }
+
+  Color _getSafeColor(dynamic color) {
+    try {
+      if (color is Color) {
+        return color;
+      } else if (color is int) {
+        return Color(color);
+      }
+      return const Color(0xFFF5C04E);
+    } catch (e) {
+      return const Color(0xFFF5C04E);
+    }
   }
 
   @override
@@ -42,12 +97,17 @@ class _GroupsPageState extends State<GroupsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("List",
-                      style: GoogleFonts.poppins(
-                          fontSize: 28, fontWeight: FontWeight.bold)),
+                  Text(
+                    "List",
+                    style: GoogleFonts.poppins(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
@@ -57,23 +117,46 @@ class _GroupsPageState extends State<GroupsPage> {
                     ),
                     onPressed: _openCreateGroupSheet,
                     icon: const Icon(Icons.add, color: Colors.white, size: 18),
-                    label: const Text("New List",
-                        style: TextStyle(color: Colors.white)),
+                    label: const Text(
+                      "New List",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
+
+              // List groups - XỬ LÝ AN TOÀN TẤT CẢ DỮ LIỆU
               Expanded(
-                child: ListView.builder(
+                child: widget.groups.isEmpty
+                    ? const Center(
+                  child: Text(
+                    "No groups yet",
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                )
+                    : ListView.builder(
                   itemCount: widget.groups.length,
                   itemBuilder: (context, index) {
                     final g = widget.groups[index];
-                    return GroupCard(
-                      title: g['title'],
-                      subtitle: g['subtitle'],
-                      tasks: g['tasks'],
-                      color: g['color'],
-                      icon: g['icon'],
+
+                    // XỬ LÝ AN TOÀN
+                    final safeTitle = g['title']?.toString() ?? 'No Title';
+                    final safeSubtitle = g['subtitle']?.toString() ?? 'To Do';
+                    final safeTasks = g['tasks']?.toString() ?? '0 tasks';
+                    final safeColor = _getSafeColor(g['color']);
+                    final safeIcon = _getSafeIcon(g['icon']);
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: GroupCard(
+                        title: safeTitle,
+                        subtitle: safeSubtitle,
+                        tasks: safeTasks,
+                        color: safeColor,
+                        icon: safeIcon,
+                        onDelete: () => _showDeleteConfirmation(g),
+                      ),
                     );
                   },
                 ),

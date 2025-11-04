@@ -18,7 +18,7 @@ class CreateTaskSheet extends StatefulWidget {
 class _CreateTaskSheetState extends State<CreateTaskSheet> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController descController = TextEditingController();
-  Map<String, dynamic>? selectedGroup;
+  String? selectedGroupTitle;
 
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
@@ -114,7 +114,7 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
 
                 const SizedBox(height: 20),
 
-                // List selection
+                // Select List
                 Text("Select List",
                     style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w600, fontSize: 16)),
@@ -124,34 +124,43 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
                   spacing: 8,
                   runSpacing: 8,
                   children: widget.groups.map((group) {
-                    final isSelected = selectedGroup == group;
+                    final bool isSelected =
+                        selectedGroupTitle == group['title'];
+                    final Color color = group['color'] is Color
+                        ? group['color']
+                        : Color(group['color']); // đảm bảo đọc được từ prefs
+
                     return GestureDetector(
-                      onTap: () => setState(() => selectedGroup = group),
+                      onTap: () {
+                        setState(() => selectedGroupTitle = group['title']);
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? group['color']
-                              : Colors.white,
+                          color: isSelected ? color : Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: group['color']),
+                          border: Border.all(color: color),
                           boxShadow: isSelected
                               ? [
                             BoxShadow(
-                              color: group['color'].withOpacity(0.3),
+                              color: color.withOpacity(0.3),
                               blurRadius: 6,
                               offset: const Offset(0, 3),
                             )
                           ]
                               : [],
                         ),
-                        child: Text(group['title'],
-                            style: GoogleFonts.poppins(
-                              color:
-                              isSelected ? Colors.white : Colors.black87,
-                            )),
+                        child: Text(
+                          group['title'],
+                          style: GoogleFonts.poppins(
+                            color:
+                            isSelected ? Colors.white : Colors.black87,
+                            fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                        ),
                       ),
                     );
                   }).toList(),
@@ -184,7 +193,7 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
     );
   }
 
-  // Hàm chọn ngày
+  // Chọn ngày
   Future<void> _pickDate() async {
     DateTime now = DateTime.now();
     final picked = await showDatePicker(
@@ -196,40 +205,45 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
     if (picked != null) setState(() => selectedDate = picked);
   }
 
-  // Hàm chọn giờ
+  // Chọn giờ
   Future<void> _pickTime() async {
     final picked =
     await showTimePicker(context: context, initialTime: TimeOfDay.now());
     if (picked != null) setState(() => selectedTime = picked);
   }
 
-  // Tạo task mới
+  // ✅ Tạo task mới (đảm bảo giữ nguyên giờ & màu)
   void _createTask() {
     if (titleController.text.trim().isEmpty ||
-        selectedGroup == null ||
-        selectedDate == null ||
-        selectedTime == null) {
+        selectedGroupTitle == null ||
+        selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill all required fields")),
       );
       return;
     }
 
-    // Gộp ngày & giờ thành DateTime
+    final time = selectedTime ?? const TimeOfDay(hour: 9, minute: 0);
+
     final dueDate = DateTime(
       selectedDate!.year,
       selectedDate!.month,
       selectedDate!.day,
-      selectedTime!.hour,
-      selectedTime!.minute,
+      time.hour,
+      time.minute,
     );
+
+    final selectedGroup = widget.groups
+        .firstWhere((g) => g['title'] == selectedGroupTitle);
 
     final newTask = {
       'title': titleController.text.trim(),
       'description': descController.text.trim(),
       'dueDate': dueDate,
-      'category': selectedGroup!['title'],
-      'color': selectedGroup!['color'],
+      'category': selectedGroup['title'],
+      'color': selectedGroup['color'] is Color
+          ? selectedGroup['color'].value
+          : selectedGroup['color'],
       'status': 'todo',
       'done': false,
     };
